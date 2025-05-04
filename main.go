@@ -1,10 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"time"
 
+	"github.com/Moukhtar-youssef/URL_Shortner.git/handlers"
+	"github.com/Moukhtar-youssef/URL_Shortner.git/middleware"
 	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/storage"
+	"github.com/labstack/echo/v4"
 )
 
 func main() {
@@ -16,17 +19,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = DB.SaveURL("localhost:8080/644", "https://chatgpt.com/c/68179ff0-bc1c-8002-b8b5-80562e6a02e0")
+	_, err = handlers.CreateShortURL(DB, "try.com")
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
-	LongURL, err := DB.GetURL("localhost:8080/644")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(LongURL)
-	err = DB.DeleteURL("localhost:8080/644")
-	if err != nil {
-		log.Fatal(err)
+	e := echo.New()
+	e.Use(middleware.AllowRequests(10, 1*time.Minute, 20, 1*time.Minute))
+	if err := e.Start(":8080"); err != nil {
+		e.Logger.Fatal(err)
 	}
 }
