@@ -15,7 +15,8 @@ type URLDB struct {
 	DB    *sql.DB
 	Redis *redis.Client
 	Ctx   context.Context
-	mut   sync.Mutex
+	Mut   sync.Mutex
+	Wg    sync.WaitGroup
 }
 
 func ConnectToDB(sqlitePath string, redisAddr string) (*URLDB, error) {
@@ -36,7 +37,8 @@ func ConnectToDB(sqlitePath string, redisAddr string) (*URLDB, error) {
 		DB:    db,
 		Redis: rdb,
 		Ctx:   ctx,
-		mut:   sync.Mutex{},
+		Mut:   sync.Mutex{},
+		Wg:    sync.WaitGroup{},
 	}, nil
 }
 func (URLDB *URLDB) createURLtable() error {
@@ -58,8 +60,8 @@ func (URLDB *URLDB) CreateTable() error {
 	return nil
 }
 func (URLDB *URLDB) SaveURL(short, long string) error {
-	URLDB.mut.Lock()
-	defer URLDB.mut.Unlock()
+	URLDB.Mut.Lock()
+	defer URLDB.Mut.Unlock()
 	_, err := URLDB.DB.Exec("INSERT INTO urls (short,long) VALUES (?,?)", short, long)
 	if err != nil {
 		return fmt.Errorf("Error inserting URLS: %w", err)
@@ -67,8 +69,8 @@ func (URLDB *URLDB) SaveURL(short, long string) error {
 	return URLDB.Redis.Set(URLDB.Ctx, short, long, time.Hour*24).Err()
 }
 func (URLDB *URLDB) GetURL(short string) (string, error) {
-	URLDB.mut.Lock()
-	defer URLDB.mut.Unlock()
+	URLDB.Mut.Lock()
+	defer URLDB.Mut.Unlock()
 	val, err := URLDB.Redis.Get(URLDB.Ctx, short).Result()
 	if err != redis.Nil {
 		return val, nil
@@ -82,17 +84,27 @@ func (URLDB *URLDB) GetURL(short string) (string, error) {
 	return long, nil
 }
 func (URLDB *URLDB) DeleteURL(short string) error {
-	URLDB.mut.Lock()
-	defer URLDB.mut.Unlock()
+	URLDB.Mut.Lock()
+	defer URLDB.Mut.Unlock()
 	_, err := URLDB.DB.Exec("DELETE FROM urls WHERE short = ?", short)
 	if err != nil {
 		return fmt.Errorf("Errors Deleting URL: %w", err)
 	}
 	return URLDB.Redis.Del(URLDB.Ctx, short).Err()
 }
+func (URLDB *URLDB) EditURL(short string, newlong string) error {
+	URLDB.Mut.Lock()
+	defer URLDB.Mut.Unlock()
+	_, err := URLDB.DB.Exec("UPDATE urls SET long = ? WHERE short = ?", newlong, short)
+
+	if err != nil {
+		return fmt.Errorf("Error updating urls: %w", err)
+	}
+	return URLDB.Redis.Set(URLDB.Ctx, short, newlong, time.Hour*24).Err()
+}
 func (URLDB *URLDB) CheckShortURLExists(short string) (bool, error) {
-	URLDB.mut.Lock()
-	defer URLDB.mut.Unlock()
+	URLDB.Mut.Lock()
+	defer URLDB.Mut.Unlock()
 	_, err := URLDB.Redis.Get(URLDB.Ctx, short).Result()
 	if err != redis.Nil {
 		return true, nil

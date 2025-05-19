@@ -31,19 +31,15 @@ func CreateShortURL(DB *Storage.URLDB, longurl string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if !exists {
-			fmt.Println(ShortURL)
-			go func(ShortURL, longurl string) {
-				var saveErr error
-				for range maximum_tries {
-					saveErr = DB.SaveURL(ShortURL, longurl)
-					if saveErr == nil {
-						return
-					}
-					time.Sleep(Try_delay)
-				}
-			}(ShortURL, longurl)
-			return ShortURL, nil
+		if exists {
+			continue
+		}
+		for range maximum_tries {
+			err := DB.SaveURL(ShortURL, longurl)
+			if err == nil {
+				return ShortURL, nil
+			}
+			time.Sleep(Try_delay)
 		}
 
 	}
@@ -53,20 +49,35 @@ func DeleteShortURL(DB *Storage.URLDB, shorturl string) error {
 	if err != nil {
 		return err
 	}
-	if exists {
-		go func(shorturl string) {
-			for range maximum_tries {
-				var saveErr error
-				saveErr = DB.DeleteURL(shorturl)
-				if saveErr == nil {
-					return
-				}
-				time.Sleep(Try_delay)
-			}
-		}(shorturl)
-		return nil
+	if !exists {
+		return fmt.Errorf("The provided url isn't found")
 	}
-	return fmt.Errorf("The provided url isn't found")
+	type result struct {
+		err error
+	}
+	results := make(chan result, maximum_tries)
+	for range maximum_tries {
+		DB.Wg.Add(1)
+		go func() {
+			defer DB.Wg.Done()
+			err := DB.DeleteURL(shorturl)
+			results <- result{err: err}
+		}()
+		time.Sleep(Try_delay)
+	}
+
+	go func() {
+		DB.Wg.Wait()
+		close(results)
+	}()
+
+	for res := range results {
+		if res.err == nil {
+			return nil // deletion successful
+		}
+	}
+
+	return fmt.Errorf("Failed to delte shorturl after %d tries", maximum_tries)
 }
 func GetLongURL(DB *Storage.URLDB, shorturl string) (string, error) {
 	exists, err := DB.CheckShortURLExists(shorturl)
@@ -81,4 +92,18 @@ func GetLongURL(DB *Storage.URLDB, shorturl string) (string, error) {
 		return longURL, nil
 	}
 	return "", fmt.Errorf("there is no url associated with this short url")
+}
+func EditLongURL(DB *Storage.URLDB, shorturl string, newlong string) (string, error) {
+	exists, err := DB.CheckShortURLExists(shorturl)
+	if err != nil {
+		return "", err
+	}
+	if !exists {
+		return "", fmt.Errorf("there is no url associated with this long url")
+	}
+	err = DB.EditURL(shorturl, newlong)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Edited the long url associated with : %s", shorturl), nil
 }
