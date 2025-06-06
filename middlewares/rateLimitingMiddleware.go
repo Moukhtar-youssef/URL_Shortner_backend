@@ -1,4 +1,4 @@
-package middleware
+package middlewares
 
 import (
 	"context"
@@ -10,12 +10,14 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var ctx = context.Background()
-var rdb = redis.NewClient(&redis.Options{
-	Addr:     "localhost:6379",
-	Password: "",
-	DB:       1,
-})
+var (
+	ctx = context.Background()
+	rdb = redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       1,
+	})
+)
 
 func AllowRequests(limit int, window time.Duration, banlimit int, banduration time.Duration) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
