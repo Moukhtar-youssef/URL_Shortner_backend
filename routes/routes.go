@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"io"
 	"log"
 	"net/http"
 	"time"
@@ -9,7 +8,6 @@ import (
 	"github.com/Moukhtar-youssef/URL_Shortner.git/handlers"
 	"github.com/Moukhtar-youssef/URL_Shortner.git/middlewares"
 	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/storage"
-	"github.com/labstack/echo-contrib/jaegertracing"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -19,14 +17,9 @@ type Create struct {
 }
 
 func SetupRoutes(DB *Storage.URLDB) *echo.Echo {
+	// setting up echo server
+
 	e := echo.New()
-	c := jaegertracing.New(e, nil)
-	defer func(c io.Closer) {
-		err := c.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}(c)
 	e.Use(middlewares.AllowRequests(100, 1*time.Minute, 200, 1*time.Minute))
 	e.Use(middleware.CORS())
 	e.Use(middleware.BodyLimit("2M"))

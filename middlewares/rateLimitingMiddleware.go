@@ -50,7 +50,7 @@ func AllowRequests(limit int, window time.Duration, banlimit int, banduration ti
 				}
 
 				reset, _ := rdb.TTL(ctx, key).Result()
-				return c.JSON(http.StatusTooManyRequests, map[string]any{
+				return c.JSON(http.StatusOK, map[string]any{
 					"message":      "Rate limit exceeded",
 					"retry_after":  reset.Seconds(),
 					"limit":        limit,

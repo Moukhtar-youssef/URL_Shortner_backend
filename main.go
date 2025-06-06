@@ -1,17 +1,13 @@
 package main
 
 import (
-	"errors"
 	"log"
 
 	"github.com/Moukhtar-youssef/URL_Shortner.git/routes"
 	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/storage"
 )
 
-var (
-	DB                  *Storage.URLDB
-	ErrAlreadyShortened = errors.New("this URL is already shortened")
-)
+var DB *Storage.URLDB
 
 func init() {
 	var err error

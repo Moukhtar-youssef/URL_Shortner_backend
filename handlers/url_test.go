@@ -15,8 +15,7 @@ func TestShortner(t *testing.T) {
 		alphabetMap[ch] = true
 	}
 	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for target function.
+		name        string
 		longurl     string
 		expectError bool
 	}{
