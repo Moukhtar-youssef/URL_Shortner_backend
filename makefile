@@ -13,10 +13,12 @@ run:
 test:
 	go mod tidy
 	go mod vendor 
+	go clean -testcache
 	go test ./...
 coverage:
 	go mod tidy 
 	go mod vendor
+	go clean -testcache
 	go test -v ./... -coverprofile=coverage.out
 	go tool cover -html=coverage.out
 check-quality: 

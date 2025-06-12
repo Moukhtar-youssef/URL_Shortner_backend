@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -11,7 +12,7 @@ import (
 )
 
 func TestShortner(t *testing.T) {
-	baseURL := "http://localhost:8080/"
+	baseURL := os.Getenv("BASE_URL")
 	alphabet := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	alphabetMap := make(map[rune]bool)
 	for _, ch := range alphabet {
