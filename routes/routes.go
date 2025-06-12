@@ -1,12 +1,12 @@
 package routes
 
 import (
+	"fmt"
 	"log"
 	"net/http"
-	"time"
+	"os"
 
 	"github.com/Moukhtar-youssef/URL_Shortner.git/handlers"
-	"github.com/Moukhtar-youssef/URL_Shortner.git/middlewares"
 	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/storage"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -20,22 +20,19 @@ func SetupRoutes(DB *Storage.URLDB) *echo.Echo {
 	// setting up echo server
 
 	e := echo.New()
-	e.Use(middlewares.AllowRequests(100, 1*time.Minute, 200, 1*time.Minute))
+	// e.Use(middlewares.AllowRequests(100, 1*time.Minute, 200, 1*time.Minute))
 	e.Use(middleware.CORS())
 	e.Use(middleware.BodyLimit("2M"))
 
 	// Routes
+	e.GET("/ping", func(c echo.Context) error {
+		return c.String(http.StatusOK, "pong")
+	})
 
 	e.GET("/:id", func(c echo.Context) error {
-		req := c.Request()
-		scheme := "http"
-		if req.TLS != nil {
-			scheme = "https"
-		}
-		host := req.Host
-		baseURL := scheme + "://" + host
 		shorturl := c.Param("id")
-		shorturlfull := baseURL + "/" + shorturl
+		shorturlfull := os.Getenv("BASE_URL") + "/" + shorturl
+		fmt.Println(shorturlfull)
 		longurl, err := handlers.GetLongURL(DB, shorturlfull)
 		if err != nil {
 			log.Fatal(err)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -14,10 +15,11 @@ import (
 const (
 	Alphabet      = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	NumberOfChrs  = 7
-	baseURL       = "http://localhost:8080"
 	maximum_tries = 3
 	Try_delay     = 2 * time.Second
 )
+
+var baseURL = os.Getenv("BASE_URL")
 
 var AlphabetRunes = []rune(Alphabet)
 
@@ -40,9 +42,6 @@ func Shortner(longurl string) (string, error) {
 	err := urlValidator(longurl)
 	if err != nil {
 		return "", err
-	}
-	if longurl == "" {
-		return "", customerrors.ErrEmptyLongURL
 	}
 	var ShortURLCode strings.Builder
 	for range NumberOfChrs {
@@ -115,14 +114,14 @@ func GetLongURL(DB *Storage.URLDB, shorturl string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if exists {
-		longURL, err := DB.GetURL(shorturl)
-		if err != nil {
-			return "", err
-		}
-		return longURL, nil
+	if !exists {
+		return "", fmt.Errorf("there is no url associated with this long url")
 	}
-	return "", fmt.Errorf("there is no url associated with this short url")
+	longURL, err := DB.GetURL(shorturl)
+	if err != nil {
+		return "", fmt.Errorf("there is no url associated with this short url")
+	}
+	return longURL, nil
 }
 
 func EditLongURL(DB *Storage.URLDB, shorturl string, newlong string) (string, error) {
