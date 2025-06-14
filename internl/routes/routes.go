@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Moukhtar-youssef/URL_Shortner.git/handlers"
-	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/storage"
+	"github.com/Moukhtar-youssef/URL_Shortner.git/internl/handlers"
+	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/internl/storage"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )

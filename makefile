@@ -1,13 +1,14 @@
 APP=URL_shortner_backend
-APP_EXECUTABLE="./target/$(APP)"
+APP_EXECUTABLE="./bin/$(APP)"
 
 
 build:
-	mkdir -p target/
-	go build -o $(APP_EXECUTABLE)
+	mkdir -p bin/
+	go build -o $(APP_EXECUTABLE) ./cmd/backend/main.go
 run:
 	make build 
 	chmod +x $(APP_EXECUTABLE)
+	export $(grep -v '^#' .env | xargs)
 	clear
 	$(APP_EXECUTABLE)
 test:

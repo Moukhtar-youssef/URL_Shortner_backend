@@ -12,7 +12,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   backend:
-    build: .
+    image: moukhtar/url_shortner_backend
     env_file:
         - docker.env
     labels:

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	customerrors "github.com/Moukhtar-youssef/URL_Shortner.git/custom_errors"
-	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/storage"
+	customerrors "github.com/Moukhtar-youssef/URL_Shortner.git/internl/custom_errors"
+	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/internl/storage"
 )
 
 const (

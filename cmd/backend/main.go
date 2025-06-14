@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/Moukhtar-youssef/URL_Shortner.git/routes"
-	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/storage"
+	"github.com/Moukhtar-youssef/URL_Shortner.git/internl/routes"
+	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/internl/storage"
 )
 
 var DB *Storage.URLDB
