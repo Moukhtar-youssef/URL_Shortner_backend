@@ -15,12 +15,12 @@ test:
 	go mod tidy
 	go mod vendor 
 	go clean -testcache
-	go test ./...
+	go test ./tests/...
 coverage:
 	go mod tidy 
 	go mod vendor
 	go clean -testcache
-	go test -v ./... -coverprofile=coverage.out
+	go test -v ./tests/... -coverprofile=coverage.out -coverpkg=./internl/...
 	go tool cover -html=coverage.out
 check-quality: 
 	go fmt ./... 

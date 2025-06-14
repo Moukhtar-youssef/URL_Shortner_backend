@@ -13,7 +13,7 @@ export const options = {
 };
 
 export default function () {
-  const url = "http://localhost:8080/create";
+  const url = "http://localhost:8081/create";
   const payload = JSON.stringify({
     long_url: "https://echo.labstack.com/docs/request",
   });

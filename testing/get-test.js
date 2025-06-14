@@ -10,7 +10,7 @@ export const options = {
 };
 
 export default function () {
-  const url = "http://127.0.0.1:8080/JCawU4I";
+  const url = "http://localhost:8081/try";
 
   const res = http.get(url);
 
