@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Moukhtar-youssef/URL_Shortner.git/handlers"
-	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/storage"
+	"github.com/Moukhtar-youssef/URL_Shortner.git/internl/handlers"
+	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/internl/storage"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/assert"
 )
