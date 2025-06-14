@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -12,7 +13,7 @@ import (
 )
 
 func TestShortner(t *testing.T) {
-	baseURL := os.Getenv("BASE_URL")
+	baseURL := fmt.Sprintf("%s/", os.Getenv("BASE_URL"))
 	alphabet := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	alphabetMap := make(map[rune]bool)
 	for _, ch := range alphabet {
@@ -23,7 +24,7 @@ func TestShortner(t *testing.T) {
 		longurl     string
 		expectError bool
 	}{
-		{"Valid URL", "https://www.reddit.com/r/golang/comments/18pkfns/question_regarding_seeding_in_the_go_122/", false},
+		{"Valid URL", "https://www.reddit.com/r/golang/comments/18pkfns/question_regarding_seeding_in_the_go_122", false},
 		// making sure it doesn't accept empty long urls
 		{"Empty URL", "", true},
 		// make sure it isn't already short

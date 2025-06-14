@@ -115,7 +115,11 @@ func (URLDB *URLDB) startInsertWorkers(n int) {
 	for range n {
 		go func() {
 			for pair := range URLDB.insertQueue {
-				_, err := URLDB.DB.Exec(URLDB.Ctx, "INSERT INTO urls (short,long) VALUES ($1,$2) ON CONFLICT (short) DO NOTHING", pair.short, pair.long)
+				err := URLDB.Redis.Set(URLDB.Ctx, pair.short, pair.long, time.Hour*24).Err()
+				if err != nil {
+					fmt.Printf("Insert error: %v\n", err)
+				}
+				_, err = URLDB.DB.Exec(URLDB.Ctx, "INSERT INTO urls (short,long) VALUES ($1,$2) ON CONFLICT (short) DO NOTHING", pair.short, pair.long)
 				if err != nil {
 					fmt.Printf("Insert error: %v\n", err)
 				}
