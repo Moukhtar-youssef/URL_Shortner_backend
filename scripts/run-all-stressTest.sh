@@ -1,5 +1,5 @@
 #!/bin/bash
-for file in ./testing/*.js; do
+for file in ./stress_test/*.js; do
 	echo "Running $file..."
 	k6 run "$file"
 done
