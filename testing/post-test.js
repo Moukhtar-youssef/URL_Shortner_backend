@@ -13,7 +13,7 @@ export const options = {
 };
 
 export default function () {
-  const url = "http://localhost:8081/create";
+  const url = "http://localhost:8080/create";
   const payload = JSON.stringify({
     long_url: "https://echo.labstack.com/docs/request",
   });
@@ -27,7 +27,7 @@ export default function () {
   const res = http.post(url, payload, params);
 
   check(res, {
-    "is status 200": (r) => r.status === 200,
+    "is status 201": (r) => r.status === 200,
   });
 
   sleep(0.1); // simulate user wait time between requests

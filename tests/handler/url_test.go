@@ -52,10 +52,6 @@ func TestShortner(t *testing.T) {
 					return
 				}
 			}
-			if !strings.HasPrefix(got, baseURL) {
-				t.Errorf("Shortner() = %v, want prefix %v", got, baseURL)
-			}
-
 			code := strings.TrimPrefix(got, baseURL)
 			if len(code) != (handlers.NumberOfChrs) {
 				t.Errorf("Short code length = %d, want %d", len(code), handlers.NumberOfChrs)

@@ -5,6 +5,8 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  release:
+    types: [created]
 
 jobs:
   Build:
@@ -106,7 +108,7 @@ jobs:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
     needs: Test
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'release' && github.event.action == 'created'
 
     steps:
       - name: Checkout code
@@ -126,4 +128,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: moukhtar/url_shortner_backend:latest
+          tags: |
+            moukhtar/url_shortner_backend:latest
+            moukhtar/url_shortner_backend:${{ github.event.release.tag_name }}

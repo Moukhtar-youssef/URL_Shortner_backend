@@ -3,8 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"time"
 
+	"github.com/Moukhtar-youssef/URL_Shortner.git/internl/middlewares"
 	"github.com/Moukhtar-youssef/URL_Shortner.git/internl/routes"
 	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/internl/storage"
 )
@@ -18,12 +21,15 @@ func init() {
 	pport := os.Getenv("POSTGRES_PORT")
 	dbname := os.Getenv("POSTGRES_DB")
 	Redis_host := os.Getenv("REDIS_HOST")
+	Redis_port := os.Getenv("REDIS_PORT")
+	if Redis_port == "" {
+		Redis_port = "6379"
+	}
 	// Usually sslmode=disable for local dev; adjust as needed
 	sslmode := "disable"
 
 	connURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", user, password, host, pport, dbname, sslmode)
-	Redis_URL := fmt.Sprintf("%s:6379", Redis_host)
-	fmt.Println(connURL)
+	Redis_URL := fmt.Sprintf("%s:%s", Redis_host, Redis_port)
 	var err error
 	DB, err = Storage.ConnectToDB(connURL, Redis_URL)
 	if err != nil {
@@ -33,9 +39,6 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	DB.DB.Exec(DB.Ctx, "INSERT INTO urls (short,long) VALUES ('http://localhost:8080/try','https://www.youtube.com') ON CONFLICT (short) DO NOTHING")
-	eixts, _ := DB.CheckShortURLExists("http://localhost:8080/try")
-	fmt.Println(eixts)
 }
 
 func main() {
@@ -45,8 +48,17 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
-	echo_routes := routes.SetupRoutes(DB)
-	if err := echo_routes.Start(":8081"); err != nil {
-		echo_routes.Logger.Fatal(err)
+	mux := routes.SetupRoutes(DB)
+	handler := middlewares.LoggingMiddleware(mux)
+	server := &http.Server{
+		Addr:         ":8081",
+		Handler:      handler,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  15 * time.Second,
+	}
+	log.Printf("Starting server on %s", ":8081")
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatalf("Server error: %v", err)
 	}
 }

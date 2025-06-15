@@ -1,70 +1,133 @@
 package routes
 
 import (
+	"encoding/json"
+	"encoding/xml"
 	"fmt"
-	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"reflect"
+	"strings"
 
 	"github.com/Moukhtar-youssef/URL_Shortner.git/internl/handlers"
 	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/internl/storage"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 )
 
 type Create struct {
 	LongURL string `param:"long_url" query:"long_url" header:"long_url" json:"long_url" xml:"long_url" form:"long_url"`
 }
 
-func SetupRoutes(DB *Storage.URLDB) *echo.Echo {
-	// setting up echo server
+var baseURL = os.Getenv("BASE_URL")
 
-	e := echo.New()
-	// e.Use(middlewares.AllowRequests(100, 1*time.Minute, 200, 1*time.Minute))
-	e.Use(middleware.CORS())
-	e.Use(middleware.BodyLimit("2M"))
-
-	// Routes
-	e.GET("/ping", func(c echo.Context) error {
-		return c.String(http.StatusOK, "pong")
-	})
-
-	e.GET("/:id", func(c echo.Context) error {
-		shorturl := c.Param("id")
-		shorturlfull := os.Getenv("BASE_URL") + "/" + shorturl
-		fmt.Println(shorturlfull)
-		longurl, err := handlers.GetLongURL(DB, shorturlfull)
+func SetupRoutes(DB *Storage.URLDB) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		if id == "" {
+			http.Error(w, "Missing URL ID", http.StatusBadRequest)
+			return
+		}
+		url, err := handlers.GetLongURL(DB, id)
 		if err != nil {
-			log.Fatal(err)
+			http.Error(w, "URL not found", http.StatusNotFound)
+			return
+		}
+		http.Redirect(w, r, url, http.StatusFound)
+	})
+	mux.HandleFunc("POST /create", func(w http.ResponseWriter, r *http.Request) {
+		var input Create
+
+		err := parseRequest(r, &input)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Invalid request: %v", err), http.StatusBadRequest)
+			return
 		}
 
-		return c.Redirect(http.StatusMovedPermanently, longurl)
-	})
-	e.POST("/create", func(c echo.Context) error {
-		q := new(Create)
-		err := c.Bind(q)
+		if input.LongURL == "" {
+			http.Error(w, "Missing long_url parameter", http.StatusBadRequest)
+			return
+		}
+
+		shorturl, err := handlers.CreateShortURL(DB, input.LongURL)
 		if err != nil {
+			fmt.Println(err)
+			http.Error(w, "Error saving URL", http.StatusInternalServerError)
+			return
+		}
+		completeShortURl := fmt.Sprintf("%s/%s", baseURL, shorturl)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(completeShortURl)
+	})
+	return mux
+}
+
+func parseRequest(r *http.Request, target interface{}) error {
+	contentType := r.Header.Get("Content-Type")
+
+	if contentType == "application/json" {
+		return json.NewDecoder(r.Body).Decode(target)
+	}
+
+	if contentType == "application/xml" || contentType == "text/xml" {
+		return xml.NewDecoder(r.Body).Decode(target)
+	}
+
+	if contentType == "application/x-www-form-urlencoded" {
+		if err := r.ParseForm(); err != nil {
 			return err
 		}
-		if queryVal := c.QueryParam("long_url"); queryVal != "" {
-			q.LongURL = queryVal
-		}
-		if paramVal := c.Param("long_url"); paramVal != "" {
-			q.LongURL = paramVal
-		}
-		if headerVal := c.Request().Header.Get("long_url"); headerVal != "" {
-			q.LongURL = headerVal
-		}
-		var content struct {
-			Response string `json:"response"`
-		}
-		shorturl, err := handlers.CreateShortURL(DB, q.LongURL)
-		if err != nil {
-			return err
-		}
-		content.Response = shorturl
-		return c.JSON(http.StatusOK, &content)
-	})
+		return formToStruct(r.Form, target)
+	}
 
-	return e
+	if r.URL.Query().Get("long_url") != "" {
+		return formToStruct(r.URL.Query(), target)
+	}
+	if r.Header.Get("long_url") != "" {
+		return headerToStruct(r.Header, target)
+	}
+	return fmt.Errorf("unsupported content type: %s", contentType)
+}
+
+func formToStruct(form url.Values, target interface{}) error {
+	val := reflect.ValueOf(target).Elem()
+	typ := val.Type()
+
+	for i := range val.NumField() {
+		field := typ.Field(i)
+		tag := field.Tag.Get("form")
+		if tag == "" {
+			tag = strings.ToLower(field.Name)
+		}
+
+		if values, ok := form[tag]; ok && len(values) > 0 {
+			fieldValue := val.Field(i)
+			if fieldValue.CanSet() {
+				fieldValue.SetString(values[0])
+			}
+		}
+	}
+	return nil
+}
+
+func headerToStruct(header http.Header, target interface{}) error {
+	val := reflect.ValueOf(target).Elem()
+	typ := val.Type()
+
+	for i := range val.NumField() {
+		field := typ.Field(i)
+		tag := field.Tag.Get("header")
+		if tag == "" {
+			tag = strings.ToLower(field.Name)
+		}
+
+		if values, ok := header[tag]; ok && len(values) > 0 {
+			fieldValue := val.Field(i)
+			if fieldValue.CanSet() {
+				fieldValue.SetString(values[0])
+			}
+		}
+	}
+	return nil
 }

@@ -47,7 +47,7 @@ func Shortner(longurl string) (string, error) {
 	for range NumberOfChrs {
 		ShortURLCode.WriteRune(AlphabetRunes[rand.IntN(len(AlphabetRunes))])
 	}
-	return fmt.Sprintf("%v/%v", baseURL, ShortURLCode.String()), nil
+	return ShortURLCode.String(), nil
 }
 
 func CreateShortURL(DB *Storage.URLDB, longurl string) (string, error) {
