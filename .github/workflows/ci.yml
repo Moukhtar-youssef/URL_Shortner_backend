@@ -92,12 +92,13 @@ jobs:
           done
 
       - name: Run tests
-        run: go test -v -coverprofile=coverage.out ./...
+        run: go test -v ./tests/... -coverprofile=coverage.out -coverpkg=./internl/...
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           file: coverage.out
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   Publish-Docker:
     name: Build and Push Docker Image
