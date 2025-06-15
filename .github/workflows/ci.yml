@@ -20,20 +20,11 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'  # adjust to your Go version
+          go-version: '1.24'
+          cache: true  # Enable automatic caching
 
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Install dependencies 
-        run: go mod tidy 
+      - name: Install dependencies
+        run: go mod tidy
 
       - name: Build the application
         run: go build -v ./...
@@ -47,9 +38,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER:     postgres
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB:       testdb
+          POSTGRES_DB: testdb
         ports:
           - 5432:5432
         options: >-
@@ -70,40 +61,44 @@ jobs:
 
     env:
       # PostgreSQL ENV
-      POSTGRES_USER:     postgres
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB:       testdb
-      POST_HOST:         localhost
-      POST_PORT:         5432
+      POSTGRES_DB: testdb
+      POST_HOST: localhost
+      POST_PORT: 5432
 
       # Valkey ENV
-      VALKEY_HOST:       localhost
-      VALKEY_PORT:       6379
+      VALKEY_HOST: localhost
+      VALKEY_PORT: 6379
 
     steps:
-      - name: Checkout code 
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Go 
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+          cache: true  # Enable automatic caching
 
-      - name: Cache Go modules
-        uses: actions/cache@v3
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Wait for services to be ready
+        run: |
+          for i in {1..10}; do
+            nc -z localhost 5432 && nc -z localhost 6379 && break
+            sleep 5
+          done
+
+      - name: Run tests
+        run: go test -v -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          file: coverage.out
 
-      - name: Install dependencies 
-        run: go mod tidy 
-
-      - name: Run tests 
-        run: go test -v ./...
   Publish-Docker:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
@@ -123,11 +118,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: moukhtar/url_shortner_backend
+          tags: |
+            type=raw,value=latest
+            type=ref,event=tag
+            type=ref,event=pr
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: |
-            moukhtar/url_shortner_backend:latest
-            moukhtar/url_shortner_backend:${{ github.event.release.tag_name }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
