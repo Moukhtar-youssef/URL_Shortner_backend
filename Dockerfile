@@ -12,4 +12,14 @@ RUN GOOS=linux go build -o /bin/backend ./cmd/backend/main.go
 
 EXPOSE 8081
 
-CMD ["./bin/backend"]
+FROM alpine:latest
+
+WORKDIR /app
+
+COPY --from=builder /bin/backend .
+
+COPY --from=builder /app/internl/public ./internl/public
+
+EXPOSE 8081
+
+CMD ["./backend"]
