@@ -1,0 +1,25 @@
+http:
+  routers:
+    frontend:
+      rule: "Path(`/`) || Path(`/about`)"
+      service: frontend
+      entryPoints:
+        - web
+      priority: 100       # Higher priority than backend
+
+    backend:
+      rule: "PathPrefix(`/{path:[a-zA-Z0-9]+}`)"
+      service: backend
+      entryPoints:
+        - web
+
+  services:
+    frontend:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:5173"  # Your React dev server
+
+    backend:
+      loadBalancer:
+        servers:
+          - url: "http://backend:8081"  # Internal Docker network

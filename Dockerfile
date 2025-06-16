@@ -4,12 +4,12 @@ FROM golang:1.24-alpine
 WORKDIR /app
 
 COPY go.mod go.sum .
-RUN go mod download
+RUN go mod download 
 
 COPY . .
 
-RUN go build -o backend ./cmd/backend/main.go
+RUN GOOS=linux go build -o /bin/backend ./cmd/backend/main.go
 
 EXPOSE 8081
 
-CMD ["./backend"]
+CMD ["./bin/backend"]

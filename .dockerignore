@@ -1,4 +1,10 @@
+frontend/
+tests/
+stress_test/
 scripts/
-target/
-testing/
-vendor/
+bin/
+*.md
+*.sh
+.git/
+.gitignore
+.dockerignore

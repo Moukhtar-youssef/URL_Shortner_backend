@@ -1,27 +1,38 @@
+version: '3.8'
+
 services:
   traefik:
-    image: traefik:latest
+    image: traefik:v2.10
     command:
       - --api.insecure=true
       - --providers.docker=true
+      - --providers.file.directory=/etc/traefik/dynamic
       - --entrypoints.web.address=:80
     ports:
-      - "8080:80"     # Traefik proxy
-      - "8081:8080"   # Traefik dashboard
+      - "80:80"           # Main traffic
+      - "8080:8080"       # Dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik/dynamic:/etc/traefik/dynamic
+    networks:
+      - traefik-net
 
   backend:
     image: moukhtar/url_shortner_backend
+    build: .
     env_file:
-        - docker.env
+      - docker.env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.backend.rule=PathPrefix(`/{path:[a-zA-Z0-9]+}`)"
       - "traefik.http.services.backend.loadbalancer.server.port=8081"
-    deploy:
-      replicas: 3  # scale easily
+      - "traefik.docker.network=traefik-net"
+      - "traefik.http.middlewares.redirect-backend.redirectregex.regex=^/([a-zA-Z0-9]+)$"
+      - "traefik.http.middlewares.redirect-backend.redirectregex.replacement=/$$1"
+      - "traefik.http.routers.backend.middlewares=redirect-backend"
+    networks:
+      - traefik-net
 
 networks:
-  default:
-    name: traefik-net
+  traefik-net:
+    driver: bridge
