@@ -8,7 +8,6 @@ build:
 run:
 	make build 
 	chmod +x $(APP_EXECUTABLE)
-	export $(grep -v '^#' .env | xargs)
 	clear
 	$(APP_EXECUTABLE)
 test:

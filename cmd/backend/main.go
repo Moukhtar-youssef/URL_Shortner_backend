@@ -41,6 +41,23 @@ func init() {
 	}
 }
 
+func EnableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Allow requests from your React frontend (adjust if needed)
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		// Handle preflight OPTIONS requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	defer func() {
 		err := DB.Close()
@@ -49,7 +66,7 @@ func main() {
 		}
 	}()
 	mux := routes.SetupRoutes(DB)
-	handler := middlewares.LoggingMiddleware(mux)
+	handler := middlewares.LoggingMiddleware(EnableCORS(mux))
 	server := &http.Server{
 		Addr:         ":8081",
 		Handler:      handler,

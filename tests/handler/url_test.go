@@ -7,9 +7,6 @@ import (
 	"testing"
 
 	"github.com/Moukhtar-youssef/URL_Shortner.git/internl/handlers"
-	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/internl/storage"
-	"github.com/alicebob/miniredis/v2"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestShortner(t *testing.T) {
@@ -61,51 +58,6 @@ func TestShortner(t *testing.T) {
 				if !alphabetMap[ch] {
 					t.Errorf("Short code contains invalid character: %v", string(ch))
 				}
-			}
-		})
-	}
-}
-
-func Setup(t *testing.T) *Storage.URLDB {
-	mr, err := miniredis.Run()
-	assert.NoError(t, err)
-	dbpath := "file::memory:?cache=shared"
-	DB, err := Storage.ConnectToDB(dbpath, mr.Addr())
-
-	assert.NoError(t, err)
-	t.Cleanup(func() {
-		DB.Close()
-		mr.Close()
-	})
-	return DB
-}
-
-func TestCreateShortURL(t *testing.T) {
-	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for target function.
-		DB      *Storage.URLDB
-		longurl string
-		want    string
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, gotErr := handlers.CreateShortURL(tt.DB, tt.longurl)
-			if gotErr != nil {
-				if !tt.wantErr {
-					t.Errorf("CreateShortURL() failed: %v", gotErr)
-				}
-				return
-			}
-			if tt.wantErr {
-				t.Fatal("CreateShortURL() succeeded unexpectedly")
-			}
-			// TODO: update the condition below to compare got with tt.want.
-			if true {
-				t.Errorf("CreateShortURL() = %v, want %v", got, tt.want)
 			}
 		})
 	}
