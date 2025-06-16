@@ -1,25 +1,31 @@
-
-FROM golang:1.24-alpine
-
+# Build stage
+FROM --platform=$BUILDPLATFORM golang:1.21-alpine as builder
 WORKDIR /app
 
-COPY go.mod go.sum .
-RUN go mod download 
+# Enable Go's build cache for faster rebuilds
+ENV GOCACHE=/tmp/go-build
+ENV GOPATH=/tmp/go
 
+# Copy only what's needed for dependencies
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/tmp/go-build \
+    go mod download
+
+# Copy source files
 COPY . .
 
-RUN go build -o /bin/backend ./cmd/backend/main.go
+# Build for target platform
+ARG TARGETARCH
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/tmp/go-build \
+    CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
+    go build -o /bin/URL_shortner_backend ./cmd/backend
 
-EXPOSE 8081
-
+# Final stage
 FROM alpine:latest
-
 WORKDIR /app
-
-COPY --from=builder /bin/backend .
-
+COPY --from=builder /bin/URL_shortner_backend .
 COPY --from=builder /app/internl/public ./internl/public
-
 EXPOSE 8081
-
-CMD ["./backend"]
+CMD ["./URL_shortner_backend"]
