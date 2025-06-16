@@ -8,7 +8,7 @@ RUN go mod download
 
 COPY . .
 
-RUN GOOS=linux go build -o /bin/backend ./cmd/backend/main.go
+RUN go build -o /bin/backend ./cmd/backend/main.go
 
 EXPOSE 8081
 
