@@ -10,7 +10,6 @@ RUN go mod download
 COPY cmd/ ./cmd/
 COPY internl/ ./internl/
 COPY pkg/ ./pkg/
-COPY public/ ./public/
 
 # Build the application
 RUN go build -o /bin/backend ./cmd/backend/main.go
