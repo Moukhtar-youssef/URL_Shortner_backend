@@ -1,21 +1,28 @@
-# Build stage (named explicitly)
+# Build stage
 FROM golang:1.24-alpine AS builder
 WORKDIR /app
 
-COPY go.mod go.sum .
-RUN go mod download 
+# First copy only module files
+COPY go.mod go.sum ./
+RUN go mod download
 
-COPY . .
+# Then copy only the necessary source files
+COPY cmd/ ./cmd/
+COPY internl/ ./internl/
+COPY pkg/ ./pkg/
 
+# Build the application
 RUN go build -o /bin/backend ./cmd/backend/main.go
 
 # Final stage
 FROM alpine:latest
 WORKDIR /app
 
-# Copy from the named builder stage
+# Copy the binary
 COPY --from=builder /bin/backend .
-COPY --from=builder /app/internl/public ./internl/public
+
+# Only copy public directory if it exists
+COPY --from=builder /app/internl/public ./internl/public 2>/dev/null || echo "Public directory not found, skipping"
 
 EXPOSE 8081
 CMD ["./backend"]
