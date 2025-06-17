@@ -15,6 +15,7 @@ import (
 type URLDB struct {
 	DB          *pgxpool.Pool
 	Redis       *redis.Client
+	Cache       *cache
 	Ctx         context.Context
 	Mut         sync.Mutex
 	Wg          sync.WaitGroup
@@ -48,9 +49,12 @@ func ConnectToDB(pgconn string, redisAddr string) (*URLDB, error) {
 		return nil, fmt.Errorf("Redis connection error: %w", err)
 	}
 
+	cache := newCache()
+
 	URLDB := &URLDB{
 		DB:          db,
 		Redis:       rdb,
+		Cache:       cache,
 		Ctx:         ctx,
 		Mut:         sync.Mutex{},
 		Wg:          sync.WaitGroup{},
