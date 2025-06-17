@@ -82,7 +82,7 @@ func DeleteShortURL(DB *Storage.URLDB, shorturl string) error {
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("The provided url isn't found")
+		return fmt.Errorf("the provided url isn't found")
 	}
 	type result struct {
 		err error
@@ -106,7 +106,7 @@ func DeleteShortURL(DB *Storage.URLDB, shorturl string) error {
 		}
 	}
 
-	return fmt.Errorf("Failed to delte shorturl after %d tries", maximum_tries)
+	return fmt.Errorf("failed to delte shorturl after %d tries", maximum_tries)
 }
 
 func GetLongURL(DB *Storage.URLDB, shorturl string) (string, error) {

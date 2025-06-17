@@ -1,14 +1,14 @@
 http:
   routers:
     frontend:
-      rule: "Path(`/`) || Path(`/about`)"
+      rule: "PathPrefix(`/`) && !PathPrefix(`/api`)"
       service: frontend
       entryPoints:
         - web
-      priority: 100       # Higher priority than backend
+      priority: 100
 
     backend:
-      rule: "PathPrefix(`/{path:[a-zA-Z0-9]+}`)"
+      rule: "PathPrefix(`/api`) || PathPrefix(`/{path:[a-zA-Z0-9]+}`)"
       service: backend
       entryPoints:
         - web
@@ -17,9 +17,10 @@ http:
     frontend:
       loadBalancer:
         servers:
-          - url: "http://host.docker.internal:5173"  # Your React dev server
+          - url: "http://host.docker.internal:5173"  # React dev server
+          # - url: "http://frontend:80"               # Production React build
 
     backend:
       loadBalancer:
         servers:
-          - url: "http://backend:8081"  # Internal Docker network
+          - url: "http://backend:8081"
