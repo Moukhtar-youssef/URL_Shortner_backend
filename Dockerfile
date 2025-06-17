@@ -10,6 +10,7 @@ RUN go mod download
 COPY cmd/ ./cmd/
 COPY internl/ ./internl/
 COPY pkg/ ./pkg/
+COPY public/ ./public/
 
 # Build the application
 RUN go build -o /bin/backend ./cmd/backend/main.go
@@ -21,8 +22,6 @@ WORKDIR /app
 # Copy the binary
 COPY --from=builder /bin/backend .
 
-# Only copy public directory if it exists
-COPY --from=builder /app/internl/public ./internl/public 2>/dev/null || echo "Public directory not found, skipping"
 
 EXPOSE 8081
 CMD ["./backend"]
