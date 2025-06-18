@@ -73,6 +73,8 @@ func (URLDB *URLDB) Close() error {
 
 	URLDB.DB.Close()
 
+	URLDB.Cache.Clear()
+
 	err := URLDB.Redis.Close()
 	if err != nil {
 		return err
@@ -188,6 +190,7 @@ func (db *URLDB) startInsertWorkers(n int) {
 }
 
 func (URLDB *URLDB) SaveURL(short, long string) error {
+	URLDB.Cache.set(short, long, 5*time.Minute)
 	select {
 	case URLDB.insertQueue <- urlpair{short: short, long: long}:
 		URLDB.Wg.Add(1)
@@ -198,6 +201,10 @@ func (URLDB *URLDB) SaveURL(short, long string) error {
 }
 
 func (URLDB *URLDB) GetURL(short string) (string, error) {
+	longcache, exists := URLDB.Cache.get(short)
+	if exists {
+		return longcache, nil
+	}
 	redisShort := fmt.Sprintf("URL:%s", short)
 	if val, err := URLDB.Redis.Get(URLDB.Ctx, redisShort).Result(); err != redis.Nil {
 		return val, nil
@@ -213,6 +220,7 @@ func (URLDB *URLDB) GetURL(short string) (string, error) {
 	}
 
 	go func() {
+		URLDB.Cache.set(short, long, 5*time.Minute)
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
 		err = URLDB.Redis.Set(ctx, short, long, time.Hour*24).Err()
@@ -224,6 +232,7 @@ func (URLDB *URLDB) GetURL(short string) (string, error) {
 }
 
 func (URLDB *URLDB) DeleteURL(short string) error {
+	URLDB.Cache.Delete(short)
 	redisShort := fmt.Sprintf("URL:%s", short)
 
 	_, err := URLDB.DB.Exec(URLDB.Ctx, "DELETE FROM urls WHERE short = $1", short)
@@ -235,6 +244,8 @@ func (URLDB *URLDB) DeleteURL(short string) error {
 }
 
 func (URLDB *URLDB) EditURL(short string, newlong string) error {
+	URLDB.Cache.Delete(short)
+	URLDB.Cache.set(short, newlong, 5*time.Minute)
 	redisShort := fmt.Sprintf("URL:%s", short)
 
 	_, err := URLDB.DB.Exec(URLDB.Ctx, "UPDATE urls SET long = $1 WHERE short = $2", newlong, short)

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"reflect"
 	"strings"
 
@@ -17,8 +16,6 @@ import (
 type Create struct {
 	LongURL string `param:"long_url" query:"long_url" header:"long_url" json:"long_url" xml:"long_url" form:"long_url"`
 }
-
-var baseURL = os.Getenv("BASE_URL")
 
 func SetupRoutes(DB *Storage.URLDB) *http.ServeMux {
 	mux := http.NewServeMux()
@@ -33,7 +30,9 @@ func SetupRoutes(DB *Storage.URLDB) *http.ServeMux {
 			http.Error(w, "URL not found", http.StatusNotFound)
 			return
 		}
-		http.Redirect(w, r, url, http.StatusFound)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(url)
 	})
 	mux.HandleFunc("POST /create", func(w http.ResponseWriter, r *http.Request) {
 		var input Create
@@ -55,7 +54,7 @@ func SetupRoutes(DB *Storage.URLDB) *http.ServeMux {
 			http.Error(w, "Error saving URL", http.StatusInternalServerError)
 			return
 		}
-		completeShortURl := fmt.Sprintf("%s/%s", baseURL, shorturl)
+		completeShortURl := fmt.Sprintf("%s", shorturl)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(completeShortURl)
