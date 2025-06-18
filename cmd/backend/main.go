@@ -14,7 +14,7 @@ import (
 
 var DB *Storage.URLDB
 
-func init() {
+func Setup() {
 	user := os.Getenv("POSTGRES_USER")
 	password := os.Getenv("POSTGRES_PASSWORD")
 	host := os.Getenv("POSTGRES_HOST")
@@ -25,7 +25,6 @@ func init() {
 	if Redis_port == "" {
 		Redis_port = "6379"
 	}
-	// Usually sslmode=disable for local dev; adjust as needed
 	sslmode := "disable"
 
 	connURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", user, password, host, pport, dbname, sslmode)
@@ -41,21 +40,8 @@ func init() {
 	}
 }
 
-func EnableCORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*") // Or your React URL
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
 func main() {
+	Setup()
 	defer func() {
 		err := DB.Close()
 		if err != nil {
@@ -63,10 +49,13 @@ func main() {
 		}
 	}()
 	mux := routes.SetupRoutes(DB)
-	handler := middlewares.LoggingMiddleware(EnableCORS(mux))
+	handler := middlewares.Chain(
+		middlewares.LoggingMiddleware,
+		middlewares.EnableCORS,
+	)
 	server := &http.Server{
 		Addr:         ":8081",
-		Handler:      handler,
+		Handler:      handler(mux),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  15 * time.Second,

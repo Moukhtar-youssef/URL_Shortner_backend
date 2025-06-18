@@ -11,17 +11,22 @@ type cacheItem struct {
 }
 
 type cache struct {
-	data map[string]cacheItem
-	mu   sync.RWMutex
+	data        map[string]cacheItem
+	mu          sync.RWMutex
+	stopCleanup chan struct{}
 }
 
 func newCache() *cache {
-	return &cache{
-		data: make(map[string]cacheItem),
+	c := &cache{
+		data:        make(map[string]cacheItem),
+		mu:          sync.RWMutex{},
+		stopCleanup: make(chan struct{}),
 	}
+	go c.startCleanup(30 * time.Second)
+	return c
 }
 
-func (c *cache) set(key string, value string, ttl time.Duration) {
+func (c *cache) Set(key string, value string, ttl time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -31,17 +36,12 @@ func (c *cache) set(key string, value string, ttl time.Duration) {
 	}
 }
 
-func (c *cache) get(key string) (string, bool) {
+func (c *cache) Get(key string) (string, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	item, ok := c.data[key]
 	if !ok {
-		return "", false
-	}
-
-	if item.expiry.Before(time.Now()) {
-		delete(c.data, key)
 		return "", false
 	}
 
@@ -55,9 +55,32 @@ func (c *cache) Delete(key string) {
 	delete(c.data, key)
 }
 
-func (c *cache) Clear() {
+func (c *cache) Stop() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.data = make(map[string]cacheItem)
+	close(c.stopCleanup)
+}
+
+func (c *cache) startCleanup(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			c.mu.Lock()
+			now := time.Now()
+			for k, v := range c.data {
+				if v.expiry.Before(now) {
+					delete(c.data, k)
+				}
+			}
+			c.mu.Unlock()
+
+		case <-c.stopCleanup:
+			return
+		}
+	}
 }
