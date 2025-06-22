@@ -48,13 +48,13 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
-	rl := middlewares.NewRateLimiter(20, 10*time.Minute)
+	// rl := middlewares.NewRateLimiter(20, 10*time.Minute)
 
 	mux := routes.SetupRoutes(DB)
 	handler := middlewares.Chain(
 		middlewares.LoggingMiddleware,
 		middlewares.EnableCORS,
-		middlewares.RateLimitMiddleware(rl),
+		// middlewares.RateLimitMiddleware(rl),
 	)
 	server := &http.Server{
 		Addr:         ":8081",
