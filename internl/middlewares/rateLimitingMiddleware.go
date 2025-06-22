@@ -13,15 +13,15 @@ type visitor struct {
 	mu         sync.Mutex
 }
 
-type ratelimiter struct {
+type Ratelimiter struct {
 	visitors map[string]*visitor
 	rate     int
 	window   time.Duration
 	mu       sync.Mutex
 }
 
-func NewRateLimiter(rate int, window time.Duration) *ratelimiter {
-	rl := &ratelimiter{
+func NewRateLimiter(rate int, window time.Duration) *Ratelimiter {
+	rl := &Ratelimiter{
 		visitors: make(map[string]*visitor),
 		rate:     rate,
 		window:   window,
@@ -30,7 +30,7 @@ func NewRateLimiter(rate int, window time.Duration) *ratelimiter {
 	return rl
 }
 
-func (rl *ratelimiter) getVisitor(ip string) *visitor {
+func (rl *Ratelimiter) getVisitor(ip string) *visitor {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
@@ -45,7 +45,7 @@ func (rl *ratelimiter) getVisitor(ip string) *visitor {
 	return v
 }
 
-func (rl *ratelimiter) allow(ip string) bool {
+func (rl *Ratelimiter) allow(ip string) bool {
 	v := rl.getVisitor(ip)
 
 	v.mu.Lock()
@@ -66,7 +66,7 @@ func (rl *ratelimiter) allow(ip string) bool {
 	return true
 }
 
-func (rl *ratelimiter) cleanup() {
+func (rl *Ratelimiter) cleanup() {
 	for {
 		time.Sleep(1 * time.Minute)
 		rl.mu.Lock()
@@ -82,14 +82,21 @@ func (rl *ratelimiter) cleanup() {
 	}
 }
 
-func RateLimitMiddleware(rl *ratelimiter) func(http.Handler) http.Handler {
+func getIP(r *http.Request) string {
+	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
+		return ip
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
+func RateLimitMiddleware(rl *Ratelimiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				http.Error(w, "Cannot determine IP", http.StatusInternalServerError)
-				return
-			}
+			ip := getIP(r)
 
 			if !rl.allow(ip) {
 				http.Error(w, "Too many Requests", http.StatusTooManyRequests)

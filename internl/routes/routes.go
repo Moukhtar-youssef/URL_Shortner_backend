@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Moukhtar-youssef/URL_Shortner.git/internl/handlers"
+	"github.com/Moukhtar-youssef/URL_Shortner.git/internl/middlewares"
 	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/internl/storage"
 )
 
@@ -17,48 +18,52 @@ type Create struct {
 	LongURL string `param:"long_url" query:"long_url" header:"long_url" json:"long_url" xml:"long_url" form:"long_url"`
 }
 
-func SetupRoutes(DB *Storage.URLDB) *http.ServeMux {
+func SetupRoutes(DB *Storage.URLDB, postlimiter, getlimiter *middlewares.Ratelimiter) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
-		if id == "" {
-			http.Error(w, "Missing URL ID", http.StatusBadRequest)
-			return
-		}
-		url, err := handlers.GetLongURL(DB, id)
-		if err != nil {
-			http.Error(w, "URL not found", http.StatusNotFound)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(url)
-	})
-	mux.HandleFunc("POST /create", func(w http.ResponseWriter, r *http.Request) {
-		var input Create
+	mux.Handle("GET /{id}", middlewares.RateLimitMiddleware(getlimiter)(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			id := r.PathValue("id")
+			if id == "" {
+				http.Error(w, "Missing URL ID", http.StatusBadRequest)
+				return
+			}
+			url, err := handlers.GetLongURL(DB, id)
+			if err != nil {
+				http.Error(w, "URL not found", http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(url)
+		}),
+	))
+	mux.Handle("POST /create", middlewares.RateLimitMiddleware(postlimiter)(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var input Create
 
-		err := parseRequest(r, &input)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Invalid request: %v", err), http.StatusBadRequest)
-			return
-		}
+			err := parseRequest(r, &input)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Invalid request: %v", err), http.StatusBadRequest)
+				return
+			}
 
-		if input.LongURL == "" {
-			http.Error(w, "Missing long_url parameter", http.StatusBadRequest)
-			return
-		}
+			if input.LongURL == "" {
+				http.Error(w, "Missing long_url parameter", http.StatusBadRequest)
+				return
+			}
 
-		shorturl, err := handlers.CreateShortURL(DB, input.LongURL)
-		if err != nil {
-			fmt.Println(err)
-			http.Error(w, "Error saving URL", http.StatusInternalServerError)
-			return
-		}
-		completeShortURl := fmt.Sprintf("%s", shorturl)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(completeShortURl)
-	})
+			shorturl, err := handlers.CreateShortURL(DB, input.LongURL)
+			if err != nil {
+				fmt.Println(err)
+				http.Error(w, "Error saving URL", http.StatusInternalServerError)
+				return
+			}
+			completeShortURl := fmt.Sprintf("%s", shorturl)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(completeShortURl)
+		}),
+	))
 	return mux
 }
 
