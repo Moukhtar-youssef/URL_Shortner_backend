@@ -62,7 +62,7 @@ func SetupRoutes(DB *Storage.URLDB) *http.ServeMux {
 	return mux
 }
 
-func parseRequest(r *http.Request, target interface{}) error {
+func parseRequest(r *http.Request, target any) error {
 	contentType := r.Header.Get("Content-Type")
 
 	if contentType == "application/json" {
@@ -89,7 +89,7 @@ func parseRequest(r *http.Request, target interface{}) error {
 	return fmt.Errorf("unsupported content type: %s", contentType)
 }
 
-func formToStruct(form url.Values, target interface{}) error {
+func formToStruct(form url.Values, target any) error {
 	val := reflect.ValueOf(target).Elem()
 	typ := val.Type()
 
@@ -110,7 +110,7 @@ func formToStruct(form url.Values, target interface{}) error {
 	return nil
 }
 
-func headerToStruct(header http.Header, target interface{}) error {
+func headerToStruct(header http.Header, target any) error {
 	val := reflect.ValueOf(target).Elem()
 	typ := val.Type()
 

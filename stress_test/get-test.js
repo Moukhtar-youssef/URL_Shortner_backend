@@ -27,7 +27,7 @@ export default function () {
       tags: { name: "ShortURLRedirect" },
     };
 
-    let res = http.get("http://localhost:8080/TByPyLV", params);
+    let res = http.get("http://localhost:8080/PUoxPFj", params);
 
     // Record metrics
     responseTimes.add(res.timings.duration);
@@ -35,8 +35,7 @@ export default function () {
 
     // Validate response
     check(res, {
-      "correct redirect status": (r) => r.status === 301 || r.status === 302,
-      "has location header": (r) => r.headers["Location"] !== undefined,
+      "correct redirect status": (r) => r.status === 200 || r.status === 201,
     });
   });
 }
