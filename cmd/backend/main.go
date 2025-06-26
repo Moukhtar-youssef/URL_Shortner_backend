@@ -41,12 +41,16 @@ func Setup() {
 }
 
 func main() {
+	middlewares.StartAsyncStreamLogger(1000)
+
 	Setup()
+
 	defer func() {
 		err := DB.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
+		middlewares.StopAsyncStreamLogger()
 	}()
 	GetURLRateLimit := middlewares.NewRateLimiter(100, time.Minute)
 	CreateURLRatelimit := middlewares.NewRateLimiter(10, time.Hour)
@@ -55,6 +59,7 @@ func main() {
 	handler := middlewares.Chain(
 		middlewares.LoggingMiddleware,
 		middlewares.EnableCORS,
+		middlewares.FileLoggingMiddleware,
 	)
 	server := &http.Server{
 		Addr:         ":8081",
