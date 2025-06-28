@@ -20,7 +20,7 @@ type Create struct {
 
 func SetupRoutes(DB *Storage.URLDB, postlimiter, getlimiter *middlewares.Ratelimiter) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.Handle("GET /{id}", middlewares.RateLimitMiddleware(getlimiter)(
+	mux.Handle("GET /api/{id}", middlewares.RateLimitMiddleware(getlimiter)(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			id := r.PathValue("id")
 			if id == "" {
@@ -37,7 +37,7 @@ func SetupRoutes(DB *Storage.URLDB, postlimiter, getlimiter *middlewares.Ratelim
 			json.NewEncoder(w).Encode(url)
 		}),
 	))
-	mux.Handle("POST /create", middlewares.RateLimitMiddleware(postlimiter)(
+	mux.Handle("POST /api/create", middlewares.RateLimitMiddleware(postlimiter)(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var input Create
 

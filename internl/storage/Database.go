@@ -34,7 +34,6 @@ func ConnectToDB(pgconn string, redisAddr string) (*URLDB, error) {
 		return nil, fmt.Errorf("sqlite error: %w", err)
 	}
 
-	// Force a connection check by pinging
 	err = db.Ping(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("sqlite ping error: %w", err)

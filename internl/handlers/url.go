@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -18,8 +17,6 @@ const (
 	maximum_tries = 3
 	Try_delay     = 2 * time.Second
 )
-
-var baseURL = os.Getenv("BASE_URL")
 
 var AlphabetRunes = []rune(Alphabet)
 
