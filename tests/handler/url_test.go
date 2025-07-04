@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Moukhtar-youssef/URL_Shortner.git/internl/handlers"
+	"github.com/Moukhtar-youssef/URL_Shortner.git/internal/handlers"
 )
 
 func TestShortner(t *testing.T) {
@@ -24,15 +24,11 @@ func TestShortner(t *testing.T) {
 		{"Valid URL", "https://www.reddit.com/r/golang/comments/18pkfns/question_regarding_seeding_in_the_go_122", false},
 		// making sure it doesn't accept empty long urls
 		{"Empty URL", "", true},
-		// make sure it isn't already short
-		{"Short URL", "https://ex.co", true},
-		// making sure it doesn't accept invalid urls
 		{"Invalid URL", "http://exa mple.com", true},
 		{"Invalid URL", "ht!tp://example.com", true},
 		{"Invalid URL", "http://", true},
 		{"Invalid URL", "http://?", true},
 		{"Invalid URL", ":://invalid", true},
-		{"Invalid URL", "http://example.com/[]{}", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

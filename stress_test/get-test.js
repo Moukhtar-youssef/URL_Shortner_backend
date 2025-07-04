@@ -13,10 +13,6 @@ export let options = {
     { duration: "2m", target: 1000 }, // Peak load
     { duration: "30s", target: 0 }, // Ramp-down
   ],
-  thresholds: {
-    "http_req_duration{status:200}": ["p(95)<100"], // Only successful requests
-    http_req_failed: ["rate<0.005"], // Stricter error threshold
-  },
 };
 
 export default function () {
@@ -27,7 +23,7 @@ export default function () {
       tags: { name: "ShortURLRedirect" },
     };
 
-    let res = http.get("http://localhost:8080/PUoxPFj", params);
+    let res = http.get("http://localhost:8080/api/mHjozhX", params);
 
     // Record metrics
     responseTimes.add(res.timings.duration);

@@ -34,7 +34,6 @@ func ConnectToDB(pgconn string, redisAddr string) (*URLDB, error) {
 		return nil, fmt.Errorf("sqlite error: %w", err)
 	}
 
-	// Force a connection check by pinging
 	err = db.Ping(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("sqlite ping error: %w", err)
@@ -42,6 +41,7 @@ func ConnectToDB(pgconn string, redisAddr string) (*URLDB, error) {
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr: redisAddr,
+		DB:   0,
 	})
 
 	_, err = rdb.Ping(context.Background()).Result()
@@ -103,6 +103,13 @@ func (URLDB *URLDB) createURLtable() error {
 		return fmt.Errorf("Index creation error: %w", err)
 	}
 
+	_, err = URLDB.DB.Exec(URLDB.Ctx, `
+		CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_long_url ON urls(long);
+	`)
+	if err != nil {
+		return fmt.Errorf("Index creation error: %w", err)
+	}
+
 	return nil
 }
 
@@ -147,11 +154,9 @@ func (db *URLDB) startInsertWorkers(n int) {
 			}()
 
 			for pair := range db.insertQueue {
-				// Use context with timeout for database operations
 				ctx, cancel := context.WithTimeout(db.Ctx, 5*time.Second)
 				defer cancel()
 
-				// 1. First try Redis
 				redisShort := fmt.Sprintf("URL:%s", pair.short)
 				err := db.Redis.Set(ctx, redisShort, pair.long, 24*time.Hour).Err()
 				if err != nil {
@@ -160,7 +165,6 @@ func (db *URLDB) startInsertWorkers(n int) {
 					continue
 				}
 
-				// 2. Then PostgreSQL with retry logic
 				maxRetries := 3
 				for attempt := 1; attempt <= maxRetries; attempt++ {
 					_, err = db.DB.Exec(ctx, `
@@ -211,7 +215,7 @@ func (URLDB *URLDB) GetURL(short string) (string, error) {
 	}
 
 	var long string
-	err := URLDB.DB.QueryRow(URLDB.Ctx, "SELECT long FROM urls WHERE short = $1", short).Scan(&long)
+	err := URLDB.DB.QueryRow(URLDB.Ctx, "SELECT long FROM urls WHERE short = $1 LIMIT 1", short).Scan(&long)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", fmt.Errorf("not found")
@@ -266,10 +270,7 @@ func (URLDB *URLDB) CheckShortURLExists(short string) (bool, error) {
 
 	if Exists != 0 {
 		return true, nil
-	} else if Exists == 0 {
-		return false, nil
 	}
-
 	var exists bool
 	err = URLDB.DB.QueryRow(URLDB.Ctx, "SELECT EXISTS(SELECT 1 FROM urls WHERE short = $1)", short).Scan(&exists)
 	if err != nil {

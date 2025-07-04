@@ -3,13 +3,12 @@ package handlers
 import (
 	"fmt"
 	"math/rand/v2"
-	"net/url"
-	"os"
 	"strings"
+	"sync"
 	"time"
 
-	customerrors "github.com/Moukhtar-youssef/URL_Shortner.git/internl/custom_errors"
-	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/internl/storage"
+	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/internal/storage"
+	"github.com/Moukhtar-youssef/URL_Shortner.git/internal/utils"
 )
 
 const (
@@ -19,35 +18,27 @@ const (
 	Try_delay     = 2 * time.Second
 )
 
-var baseURL = os.Getenv("BASE_URL")
-
 var AlphabetRunes = []rune(Alphabet)
 
-func urlValidator(longurl string) error {
-	u, err := url.Parse(longurl)
-	if err != nil {
-		return customerrors.ErrInvalidLongURL
-	}
-	path := strings.Trim(u.Path, "/")
-	if len(path) == 0 {
-		return customerrors.ErrInvalidLongURL
-	}
-	if len(path) > 0 && len(path) <= 8 {
-		return customerrors.ErrAlreadyShortened
-	}
-	return nil
+var builderPool = sync.Pool{
+	New: func() any {
+		return new(strings.Builder)
+	},
 }
 
 func Shortner(longurl string) (string, error) {
-	err := urlValidator(longurl)
+	err := utils.ValidateURL(longurl)
 	if err != nil {
 		return "", err
 	}
-	var ShortURLCode strings.Builder
+	sb := builderPool.Get().(*strings.Builder)
+	sb.Reset()
 	for range NumberOfChrs {
-		ShortURLCode.WriteRune(AlphabetRunes[rand.IntN(len(AlphabetRunes))])
+		sb.WriteRune(AlphabetRunes[rand.IntN(len(AlphabetRunes))])
 	}
-	return ShortURLCode.String(), nil
+	result := sb.String()
+	builderPool.Put(sb)
+	return result, nil
 }
 
 func CreateShortURL(DB *Storage.URLDB, longurl string) (string, error) {
@@ -84,25 +75,10 @@ func DeleteShortURL(DB *Storage.URLDB, shorturl string) error {
 	if !exists {
 		return fmt.Errorf("the provided url isn't found")
 	}
-	type result struct {
-		err error
-	}
-	results := make(chan result, maximum_tries)
-	for range maximum_tries {
-		DB.Wg.Add(1)
-		go func() {
-			defer DB.Wg.Done()
-			err := DB.DeleteURL(shorturl)
-			results <- result{err: err}
-		}()
-		time.Sleep(Try_delay)
-	}
-	DB.Wg.Wait()
-	close(results)
-
-	for res := range results {
-		if res.err == nil {
-			return nil // deletion successful
+	for range 3 {
+		err := DB.DeleteURL(shorturl)
+		if err == nil {
+			return nil
 		}
 	}
 
@@ -115,7 +91,7 @@ func GetLongURL(DB *Storage.URLDB, shorturl string) (string, error) {
 		return "", err
 	}
 	if !exists {
-		return "", fmt.Errorf("there is no url associated with this long url")
+		return "", fmt.Errorf("there is no url associated with this short url")
 	}
 	longURL, err := DB.GetURL(shorturl)
 	if err != nil {
