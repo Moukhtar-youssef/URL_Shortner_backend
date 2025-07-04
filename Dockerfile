@@ -4,9 +4,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY cmd/ ./cmd/
-COPY internl/ ./internl/
-COPY pkg/ ./pkg/
+COPY . .
 
 RUN go build -o /bin/backend ./cmd/backend/main.go
 

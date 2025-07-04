@@ -23,7 +23,7 @@ export default function () {
       tags: { name: "ShortURLRedirect" },
     };
 
-    let res = http.get("http://localhost:8080/PUoxPFj", params);
+    let res = http.get("http://localhost:8080/api/mHjozhX", params);
 
     // Record metrics
     responseTimes.add(res.timings.duration);

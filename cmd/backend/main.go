@@ -7,12 +7,19 @@ import (
 	"os"
 	"time"
 
-	"github.com/Moukhtar-youssef/URL_Shortner.git/internl/middlewares"
-	"github.com/Moukhtar-youssef/URL_Shortner.git/internl/routes"
-	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/internl/storage"
+	"github.com/Moukhtar-youssef/URL_Shortner.git/internal/middlewares"
+	"github.com/Moukhtar-youssef/URL_Shortner.git/internal/routes"
+	Storage "github.com/Moukhtar-youssef/URL_Shortner.git/internal/storage"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 )
 
-var DB *Storage.URLDB
+var (
+	DB                 *Storage.URLDB
+	GetURLRateLimit    *middlewares.Ratelimiter
+	CreateURLRateLimit *middlewares.Ratelimiter
+)
 
 func Setup() {
 	user := os.Getenv("POSTGRES_USER")
@@ -38,6 +45,8 @@ func Setup() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	GetURLRateLimit = middlewares.NewRateLimiter(Redis_URL, 1000000000000000000, time.Minute)
+	CreateURLRateLimit = middlewares.NewRateLimiter(Redis_URL, 1000000000000000000, time.Minute)
 }
 
 func main() {
@@ -52,24 +61,33 @@ func main() {
 		}
 		middlewares.StopAsyncStreamLogger()
 	}()
-	GetURLRateLimit := middlewares.NewRateLimiter(100, time.Minute)
-	CreateURLRatelimit := middlewares.NewRateLimiter(10, time.Hour)
 
-	mux := routes.SetupRoutes(DB, CreateURLRatelimit, GetURLRateLimit)
-	handler := middlewares.Chain(
-		middlewares.LoggingMiddleware,
-		middlewares.EnableCORS,
-		middlewares.FileLoggingMiddleware,
-	)
+	router := chi.NewRouter()
+
+	router.Use(middleware.RealIP)
+	router.Use(middleware.Logger)
+	router.Use(middleware.CleanPath)
+	router.Use(middlewares.FileLoggingMiddleware)
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300,
+	}))
+	router.Use(middleware.Recoverer)
+
+	router.Mount("/api", routes.SetupRoutes(DB, CreateURLRateLimit, GetURLRateLimit))
+
 	server := &http.Server{
 		Addr:         ":8081",
-		Handler:      handler(mux),
-		ReadTimeout:  5 * time.Second,
+		Handler:      router,
+		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
-	log.Printf("Starting server on %s", ":8081")
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf("Server error: %v", err)
-	}
+
+	log.Println("Server running on http://localhost:8081")
+	server.ListenAndServe()
 }
